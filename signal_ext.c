@@ -166,7 +166,7 @@ static void HandleSignalPipe (ClientData d, int mask);
 
 /* Tcl_CmdProc declaration(s) */
 static int DoSignalHandler (ClientData d, Tcl_Interp *i, 
-				int argc, char *argv[]);
+				int argc, const char *argv[]);
 static int AddSignalHandler (ClientData d, Tcl_Interp *i, 
 				int argc, char *argv[]);
 static int DeleteSignalHandler (ClientData d, Tcl_Interp *i, 
@@ -196,7 +196,7 @@ int Signal_ext_Init ( Tcl_Interp *interp )
     pipe(fds);
 
     /* Create a Tcl-compliant handler for the pipe */
-    Tcl_CreateFileHandler((ClientData)fds[0], TCL_READABLE, HandleSignalPipe, 
+    Tcl_CreateFileHandler(fds[0], TCL_READABLE, HandleSignalPipe, 
                          (ClientData)interp);
 
     /* Add the signal command */
@@ -252,8 +252,10 @@ static char Usage[] = "Usage: signal add signo proc [-async]| "
 		      "signal version";
 
 static int DoSignalHandler (ClientData d, Tcl_Interp *i, 
-				int argc, char *argv[])
+				int argc, const char *argvv[])
 {
+  char** argv = (char**)argvv;
+
   /* argv[0] is "signal" */
   if (argc < 2)
   {
@@ -316,7 +318,7 @@ static int AddSignalHandler (ClientData d, Tcl_Interp *i,
   }
 
   /* Dup the process name into the structure */
-  if ( signal_handlers[sig].signal_proc = (char *)ckalloc(strlen(procname)+1) )
+  if ((signal_handlers[sig].signal_proc = (char *)ckalloc(strlen(procname)+1)))
     strcpy(signal_handlers[sig].signal_proc, procname);
   else
     signal_handlers[sig].signal_proc = 0;
@@ -327,7 +329,9 @@ static int AddSignalHandler (ClientData d, Tcl_Interp *i,
 
   if (async)
   {
-    signal_handlers[sig].async = Tcl_AsyncCreate(handle_async,(ClientData)sig);
+    long bar = sig;
+    signal_handlers[sig].async = Tcl_AsyncCreate(handle_async,
+						 (ClientData)bar);
     sa.sa_handler = handle_async_signal;
     signal_handlers[sig].save_interp = i;
   }
