@@ -1,3 +1,9 @@
+/*
+ * Smithsonian Astrophysical Observatory, Cambridge, MA, USA
+ * This code has been modified under the terms listed below and is made
+ * available under the same terms.
+ */
+
 /*****************************************************************
 ** Signal Extension for Tcl/Tk
 ** $Header$
@@ -42,10 +48,6 @@ static struct
   Tcl_AsyncHandler async;
   Tcl_Interp* save_interp; /* Used as a fallback interpreter for async */
 } signal_handlers[NSIG];
-
-/* Version information */
-static char *SignalExtensionName = "Signal";
-static char *SignalExtensionVersion = "1.4.0.1";
 
 /* Now for the complicated part: Getting a lookup structure
 ** to manage a few of the most commonly used signals:
@@ -185,8 +187,11 @@ int Signal_ext_Init ( Tcl_Interp *interp )
 {
   static int initialized = 0;
 
-  /* Tell tcl about this package */
-  Tcl_PkgProvide(interp, SignalExtensionName, SignalExtensionVersion);
+  if (Tcl_InitStubs(interp, TCL_PATCH_LEVEL, 0) == NULL)
+    return TCL_ERROR;
+
+  if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION) != TCL_OK)
+    return TCL_ERROR;
 
   if (initialized == 0)
   {
@@ -200,7 +205,8 @@ int Signal_ext_Init ( Tcl_Interp *interp )
                          (ClientData)interp);
 
     /* Add the signal command */
-    Tcl_CreateCommand(interp, "signal", DoSignalHandler, 0, 0);
+    Tcl_CreateCommand(interp, "signal", DoSignalHandler,
+		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);
   }
 
   return 0;
@@ -270,7 +276,7 @@ static int DoSignalHandler (ClientData d, Tcl_Interp *i,
     return PrintSignalHandler(d, i, argc-1, &argv[1]);
   else if ( strcmp(argv[1], "version" ) == 0 )
   {
-     Tcl_SetResult (i, SignalExtensionVersion, TCL_STATIC);
+     Tcl_SetResult (i, PACKAGE_VERSION, TCL_STATIC);
      return TCL_OK;
   }
   else
