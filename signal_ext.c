@@ -38,6 +38,33 @@
 #include <stdlib.h> /* for allocation and freeing */
 #include <unistd.h> /* for pipe(), read(), write() */
 
+/* From Tcl core: {{{ */
+/*
+ * Macros used to cast between pointers and integers (e.g. when storing an int
+ * in ClientData), on 64-bit architectures they avoid gcc warning about "cast
+ * to/from pointer from/to integer of different size".
+ */
+
+#if !defined(INT2PTR) && !defined(PTR2INT)
+#   if defined(HAVE_INTPTR_T) || defined(intptr_t)
+#	define INT2PTR(p) ((void *)(intptr_t)(p))
+#	define PTR2INT(p) ((intptr_t)(p))
+#   else
+#	define INT2PTR(p) ((void *)(p))
+#	define PTR2INT(p) ((long)(p))
+#   endif
+#endif
+#if !defined(UINT2PTR) && !defined(PTR2UINT)
+#   if defined(HAVE_UINTPTR_T) || defined(uintptr_t)
+#	define UINT2PTR(p) ((void *)(uintptr_t)(p))
+#	define PTR2UINT(p) ((uintptr_t)(p))
+#   else
+#	define UINT2PTR(p) ((void *)(p))
+#	define PTR2UINT(p) ((unsigned long)(p))
+#   endif
+#endif
+/* From Tcl core: }}} */
+
 /* Structure for remembering signal procs */
 /* Changed to add 3 members for asynchronous signal handling */
 static struct
@@ -212,12 +239,12 @@ int Signal_ext_Init ( Tcl_Interp *interp )
   return 0;
 }
 
-int Signal_Init ( Tcl_Interp *interp )
+int Tclsignal_Init ( Tcl_Interp *interp )
 {
   return Signal_ext_Init(interp);
 }
 
-int Signal_ext_SafeInit ( Tcl_Interp *interp )
+int Tclsignal_SafeInit ( Tcl_Interp *interp )
 {
   return Signal_ext_Init(interp);
 }
@@ -337,7 +364,7 @@ static int AddSignalHandler (ClientData d, Tcl_Interp *i,
   {
     long bar = sig;
     signal_handlers[sig].async = Tcl_AsyncCreate(handle_async,
-						 (ClientData)bar);
+						 UINT2PTR(bar));
     sa.sa_handler = handle_async_signal;
     signal_handlers[sig].save_interp = i;
   }
@@ -484,7 +511,7 @@ static int handle_async (ClientData clientData, Tcl_Interp *i, int code)
      I'm sure I will receive appropriate comments indicating why a different
      choice would be better. Perhaps the next release will have it righter...
   */
-  int sig = (int)clientData;
+  int sig = PTR2UINT(clientData);
   int tcode;
   Tcl_DString result;
   char * errorcode = 0;
